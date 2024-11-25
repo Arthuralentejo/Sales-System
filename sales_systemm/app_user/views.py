@@ -1,19 +1,28 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import User
+from django.contrib.auth import login, authenticate, logout
+from .models import CustomUser
+from .forms import CustomUserCreationForm, CustomUserLoginForm
 
 def home(request):
-    return render(request, 'home.html')
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('login')
+    else:
+        form = CustomUserCreationForm()
+    return render(request, 'home.html', {'form': form})
 
 
 def user_list(request):
     if request.method == 'POST':
         document_id = request.POST.get('document_id')
-        if User.objects.filter(document_id=document_id).exists():
+        if CustomUser.objects.filter(document_id=document_id).exists():
             messages.error(request, 'Documento já cadastrado')
             return render(request, 'home.html')
         else:
-            new_user = User()
+            new_user = CustomUser()
             new_user.first_name = request.POST.get('first_name')
             new_user.last_name = request.POST.get('last_name')
             new_user.document_id = document_id
@@ -21,6 +30,32 @@ def user_list(request):
             messages.success(request, 'User registered successfully.')
 
     users = {
-        'users': User.objects.all()
+        'users': CustomUser.objects.all()
     }
     return render(request, 'user_list.html', users)
+
+# def register(request):
+#     if request.method == 'POST':
+#         form = CustomUserCreationForm(request.POST)
+#         if form.is_valid():
+#             form.save()
+#             messages.success(request, 'User registered successfully.')
+#             return redirect('login')
+#     else:
+#         form = CustomUserCreationForm()
+#     return render(request, 'register.html', {'form': form})
+
+def login_view(request):
+    if request.method == 'POST':
+        form = CustomUserLoginForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect('home')
+    else:
+        form = CustomUserLoginForm()
+    return render(request, 'login.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
